@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
 
@@ -50,15 +49,9 @@ impl<T> DVec<T> {
     fn resize(&mut self, new_capacity: usize) {
         assert!(new_capacity >= self.length);
 
-        // This *could* panic, and I don't know much about panic safety,
-        // but it would probably be better if it panics before we change
-        // things inside `self`.
-        let new_buf = Buffer::new(new_capacity);
+        let old_buf = mem::replace(&mut self.buf, Buffer::new(new_capacity));
 
-        let old_buf = self.buf;
         let old_offset = self.offset;
-
-        self.buf = new_buf;
         self.offset = (new_capacity - self.length) / 2;
 
         unsafe {
@@ -75,10 +68,24 @@ impl<T> Drop for DVec<T> {
     fn drop(&mut self) {
         for i in 0..self.length {
             unsafe {
-                mem::drop(*self.buf.ptr.offset((self.offset + i) as isize));
+                ptr::drop_in_place(
+                    self.buf.ptr.offset((self.offset + i) as isize)
+                );
             }
         }
     }
+}
+
+#[test]
+fn test_resize() {
+    let mut v = DVec::<i32>::with_capacity(2);
+    v.resize(4);
+}
+
+#[test]
+#[should_panic(expected = "assertion failed")]
+fn test_bad_resize() {
+    unimplemented!()
 }
 
 #[cfg(test)]
