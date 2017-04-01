@@ -46,6 +46,56 @@ impl<T> DVec<T> {
         }
     }
 
+    pub fn capacity(&self) -> usize {
+        self.buf.capacity
+    }
+
+    pub fn len(&self) -> usize {
+        self.length
+    }
+
+    pub fn push_front(&mut self, value: T) {
+
+        if self.capacity() == 0 {
+            self.resize(1);
+            self.offset = 1;
+        } else if self.offset == 0 {
+            let new_capacity = self.capacity() * 2;
+            self.resize(new_capacity);
+        }
+
+        self.offset -= 1;
+        self.length += 1;
+        unsafe {
+            ptr::write(
+                self.buf.ptr.offset(self.offset as isize),
+                value
+            );
+        }
+    }
+
+    pub fn push_back(&mut self, value: T) {
+
+        if self.capacity() == 0 {
+            self.resize(1);
+            self.offset = 0;
+        }
+
+        if self.buf.capacity == self.offset + self.length {
+            let new_capacity = self.buf.capacity * 2;
+            self.resize(new_capacity);
+        }
+
+        self.length += 1;
+        unsafe {
+            ptr::write(
+                self.buf.ptr.offset((self.offset + self.length - 1) as isize),
+                value
+            );
+        }
+    }
+
+
     fn resize(&mut self, new_capacity: usize) {
         assert!(new_capacity >= self.length);
 
@@ -76,24 +126,52 @@ impl<T> Drop for DVec<T> {
     }
 }
 
+impl<A, B> PartialEq<DVec<B>> for DVec<A> where A: PartialEq<B> {
+    fn eq(&self, other: &DVec<B>) -> bool {
+        unimplemented!()
+    }
+}
+
 #[test]
 fn test_resize() {
     let mut v = DVec::<i32>::with_capacity(2);
+    v.push_front(1);
+    v.push_front(2);
     v.resize(4);
 }
 
 #[test]
 #[should_panic(expected = "assertion failed")]
 fn test_bad_resize() {
-    unimplemented!()
+    let mut v = DVec::<i32>::with_capacity(2);
+    v.push_front(1);
+    v.push_front(2);
+    v.resize(1);
 }
 
 #[cfg(test)]
 mod tests {
     use super::DVec;
+
     #[test]
     fn it_works() {
-        DVec::<usize>::new();
         DVec::<usize>::with_capacity(20);
+        let mut v = DVec::<usize>::new();
+        v.push_front(1);
+        v.push_back(2);
     }
+
+    // fn test_equality() {
+    //     let mut v1 = DVec::<usize>::new();
+    //     v1.push_back(1);
+    //     v1.push_back(2);
+    //     v1.push_back(3);
+    //
+    //     let mut v2 = DVec::<usize>::new();
+    //     v2.push_back(3);
+    //     v2.push_back(2);
+    //     v2.push_back(1);
+    //
+    //     assert!(v1 == v2)
+    // }
 }
