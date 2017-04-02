@@ -1,30 +1,19 @@
 use std::mem;
 use std::ptr;
+mod buffer;
+use buffer::Buffer;
 
-/// An uninitialized buffer of `capacity * mem::size_of<T>()` bytes.
-struct Buffer<T> {
-    ptr: *mut T,
-    capacity: usize,
-}
+#[doc(hidden)]
+pub use std::vec;
 
-impl<T> Buffer<T> {
-    fn new(capacity: usize) -> Buffer<T> {
-        let mut v = Vec::<T>::with_capacity(capacity);
-        let ptr = v.as_mut_ptr();
-        mem::forget(v);
-        Buffer {
-            ptr: ptr,
-            capacity: capacity,
-        }
-    }
-}
+macro_rules! dvec {
+    ($elem: expr, $n: expr) => (
+        $crate::DVec::from_vec($crate::vec::from_elem($elem, $n))
+    );
 
-impl<T> Drop for Buffer<T> {
-    fn drop(&mut self) {
-        unsafe {
-            mem::drop(Vec::from_raw_parts(self.ptr, 0, self.capacity));
-        };
-    }
+    ($($x:expr),*) => (
+        $crate::DVec::from_vec(vec![$($x),*]);
+    );
 }
 
 struct DVec<T> {
@@ -43,6 +32,18 @@ impl<T> DVec<T> {
             buf: Buffer::<T>::new(capacity),
             length: 0,
             offset: capacity/2,
+        }
+    }
+
+    pub fn from_vec(mut v: Vec<T>) -> DVec<T> {
+        unsafe {
+            let dv = DVec {
+                buf: Buffer::from_raw_parts(v.as_mut_ptr(), v.capacity()),
+                offset: 0,
+                length: v.len(),
+            };
+            mem::forget(v);
+            dv
         }
     }
 
@@ -159,6 +160,13 @@ mod tests {
         let mut v = DVec::<usize>::new();
         v.push_front(1);
         v.push_back(2);
+    }
+
+    #[test]
+    fn test_macro() {
+        dvec![String::from("abc"), 10];
+        dvec![String::from("foo"), String::from("bar"), String::from("baz")];
+        let x: DVec<()> = dvec![];
     }
 
     // fn test_equality() {
