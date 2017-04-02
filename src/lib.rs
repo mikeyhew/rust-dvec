@@ -7,13 +7,17 @@ use buffer::Buffer;
 pub use std::vec;
 
 macro_rules! dvec {
-    ($elem: expr, $n: expr) => (
-        $crate::DVec::from_vec($crate::vec::from_elem($elem, $n))
+    // dvec![x; n]
+    ($elem: expr; $n: expr) => (
+        $crate::DVec::from_vec(vec![$elem; $n])
+    );
+    // dvec![a, b, c]
+    ($($x:expr),*) => (
+        $crate::DVec::from_vec(vec![$($x),*])
     );
 
-    ($($x:expr),*) => (
-        $crate::DVec::from_vec(vec![$($x),*]);
-    );
+    // dvec![a, b, c,]
+    ($($x: expr),*,) => (dvec![$($x),*])
 }
 
 struct DVec<T> {
@@ -23,6 +27,9 @@ struct DVec<T> {
 }
 
 impl<T> DVec<T> {
+
+    // Associated Functions
+
     pub fn new() -> DVec<T> {
         DVec::with_capacity(0)
     }
@@ -47,6 +54,8 @@ impl<T> DVec<T> {
         }
     }
 
+    // Readers
+
     pub fn capacity(&self) -> usize {
         self.buf.capacity
     }
@@ -54,6 +63,8 @@ impl<T> DVec<T> {
     pub fn len(&self) -> usize {
         self.length
     }
+
+    // Mutators
 
     pub fn push_front(&mut self, value: T) {
 
@@ -96,6 +107,16 @@ impl<T> DVec<T> {
         }
     }
 
+    pub fn shrink_to_fit(&mut self) {
+        let new_capacity = self.capacity();
+        self.resize(new_capacity);
+    }
+
+    // Consumers (they take an owned DVec)
+
+
+
+    // Helpers
 
     fn resize(&mut self, new_capacity: usize) {
         assert!(new_capacity >= self.length);
@@ -115,6 +136,8 @@ impl<T> DVec<T> {
     }
 }
 
+// Trait impls
+
 impl<T> Drop for DVec<T> {
     fn drop(&mut self) {
         for i in 0..self.length {
@@ -132,6 +155,8 @@ impl<A, B> PartialEq<DVec<B>> for DVec<A> where A: PartialEq<B> {
         unimplemented!()
     }
 }
+
+
 
 #[test]
 fn test_resize() {
@@ -164,9 +189,10 @@ mod tests {
 
     #[test]
     fn test_macro() {
-        dvec![String::from("abc"), 10];
+        dvec![String::from("abc"); 10];
         dvec![String::from("foo"), String::from("bar"), String::from("baz")];
         let x: DVec<()> = dvec![];
+        dvec![1,2,3,];
     }
 
     // fn test_equality() {
